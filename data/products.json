@@ -1,0 +1,10 @@
+[
+  {
+    "id": "1",
+    "title": "Стильный худи",
+    "description": "Черный худи",
+    "price": 200,
+    "category": "одежда",
+    "inStock": true
+  }
+]
