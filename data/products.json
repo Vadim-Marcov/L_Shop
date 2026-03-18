@@ -1,9 +1,18 @@
 [
   {
     "id": "1",
-    "title": "Стильный худи",
+    "title": "Стильный худи для  прогеров",
     "description": "Черный худи",
     "price": 200,
+    "category": "одежда",
+    "inStock": true
+  },
+
+  {
+    "id": "2",
+    "title": "Модный худи для  прогеров",
+    "description": "Красный худи",
+    "price": 300,
     "category": "одежда",
     "inStock": true
   }
