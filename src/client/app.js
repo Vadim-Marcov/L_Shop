@@ -4,35 +4,83 @@ import { cartHTML } from './pages/cartTemplate.js';
 
 const appContainer = document.getElementById('app');
 
-/**
- * @param {string} page
- */
 export function navigateTo(page) {
     appContainer.innerHTML = '';
 
     if (page === 'catalog') {
         appContainer.innerHTML = catalogHTML;
+        loadProducts();
     } 
     else if (page === 'auth') {
         appContainer.innerHTML = authHTML;
-        setupAuthForm();
+        setupAuthForms();
     } 
     else if (page === 'cart') {
         appContainer.innerHTML = cartHTML;
     }
 }
 
-function setupAuthForm() {
+async function loadProducts() {
+    const container = document.getElementById('products-container');
+    if (!container) return;
+
+    try {
+        const response = await fetch('/api/products');
+        const products = await response.json();
+
+        container.innerHTML = products.map(p => `
+            <div class="product-card">
+                <h3>${p.title}</h3>
+                <p>${p.description}</p>
+                <p><strong>${p.price} руб.</strong></p>
+                <button class="btn" data-id="${p.id}">В корзину</button>
+            </div>
+        `).join('');
+    } catch (err) {
+        container.innerHTML = '<p>Ошибка загрузки товаров</p>';
+    }
+}
+
+function setupAuthForms() {
+    const regForm = document.getElementById('register-form');
     const loginForm = document.getElementById('login-form');
+
+    if (regForm) {
+        regForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+
+            const response = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+            alert(data.message);
+        });
+    }
+
     if (loginForm) {
-        loginForm.addEventListener('submit', (event) => {
-            event.preventDefault();
-            
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            
-            console.log('Данные для сервера:', { email, password });
-            alert('Рома молодец! Данные пойманы. Скоро отправим на бэк.');
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                alert('Успешный вход!');
+                navigateTo('catalog');
+            } else {
+                alert(data.message);
+            }
         });
     }
 }
