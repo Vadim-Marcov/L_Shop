@@ -31,6 +31,22 @@ app.post('/api/register', async (req, res) => {
     setSafeCookie(res, email);
     res.status(201).json({ message: "Успех!" });
 });
+app.post('/api/login', async (req, res) => {
+    const { email, password } = req.body;
+    const users = await db.read('users'); 
+    
+  
+    const user = users.find((u: any) => u.email === email && u.password === password);
+    
+    if (!user) {
+    
+        return res.status(401).json({ message: "Неверный логин или пароль!" });
+    }
+
+
+    setSafeCookie(res, email);
+    res.json({ message: "Успешный вход! Кука установлена." });
+});
 
 app.listen(PORT, () => {
     console.log(`СЕРВЕР ЗАПУЩЕН: http://localhost:${PORT}`);
