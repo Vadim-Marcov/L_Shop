@@ -5,10 +5,16 @@ const DATA_PATH = path.join(__dirname, '../../data');
 
 export const db = {
     async read(fileName: string) {
-        const data = await fs.readFile(path.join(DATA_PATH, `${fileName}.json`), 'utf-8');
-        return JSON.parse(data);
+        try {
+            const filePath = path.join(DATA_PATH, `${fileName}.json`);
+            const data = await fs.readFile(filePath, 'utf-8');
+            return JSON.parse(data);
+        } catch (error) {
+            return [];
+        }
     },
     async write(fileName: string, data: any) {
-        await fs.writeFile(path.join(DATA_PATH, `${fileName}.json`), JSON.stringify(data, null, 2));
+        const filePath = path.join(DATA_PATH, `${fileName}.json`);
+        await fs.writeFile(filePath, JSON.stringify(data, null, 2));
     }
 };
