@@ -1,5 +1,5 @@
 import { catalogHTML } from './pages/catalogTemplate.js';
-import { authHTML } from './pages/authTemplate.js';
+import { getAuthHTML } from './pages/authTemplate.js';
 import { cartHTML } from './pages/cartTemplate.js';
 
 const appContainer = document.getElementById('app');
@@ -12,7 +12,7 @@ export function navigateTo(page) {
         loadProducts();
     } 
     else if (page === 'auth') {
-        appContainer.innerHTML = authHTML;
+        appContainer.innerHTML = getAuthHTML('login');
         setupAuthForms();
     } 
     else if (page === 'cart') {
@@ -45,6 +45,25 @@ function setupAuthForms() {
     const regForm = document.getElementById('register-form');
     const loginForm = document.getElementById('login-form');
 
+    const toRegisterLink = document.getElementById('to-register');
+    const toLoginLink = document.getElementById('to-login');
+
+    if (toRegisterLink) {
+        toRegisterLink.addEventListener('click', (e) => {
+            e.preventDefault(); 
+            appContainer.innerHTML = getAuthHTML('register'); 
+            setupAuthForms(); 
+        });
+    }
+
+    if (toLoginLink) {
+        toLoginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            appContainer.innerHTML = getAuthHTML('login');
+            setupAuthForms(); 
+        });
+    }
+
     if (regForm) {
         regForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -59,6 +78,11 @@ function setupAuthForms() {
 
             const data = await response.json();
             alert(data.message);
+
+            if (response.ok) {
+                appContainer.innerHTML = getAuthHTML('login');
+                setupAuthForms();
+            }
         });
     }
 
@@ -68,7 +92,7 @@ function setupAuthForms() {
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
 
-            const response = await fetch('/api/login', {
+            const response = await fetch('/api/login', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
@@ -77,7 +101,7 @@ function setupAuthForms() {
             const data = await response.json();
             if (response.ok) {
                 alert('Успешный вход!');
-                navigateTo('catalog');
+                navigateTo('catalog'); 
             } else {
                 alert(data.message);
             }
