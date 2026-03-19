@@ -23,9 +23,7 @@ export async function navigateTo(page) {
     } 
     else if (page === 'cart') {
         appContainer.innerHTML = cartHTML;
-        if (authStatus.authorized) {
-            renderOrders();
-        }
+        renderCart(authStatus.authorized);
     }
 }
 
@@ -51,11 +49,63 @@ async function loadProducts() {
                 <h3>${p.title}</h3>
                 <p>${p.description}</p>
                 <p><strong>${p.price} руб.</strong></p>
-                <button class="btn" data-id="${p.id}">В корзину</button>
+                <button class="btn buy-btn" data-id="${p.id}">В корзину</button>
             </div>
         `).join('');
+
+        container.querySelectorAll('.buy-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const res = await fetch('/api/cart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ productId: btn.dataset.id })
+                });
+                const data = await res.json();
+                alert(data.message);
+                if (res.status === 401) navigateTo('auth');
+            });
+        });
     } catch (err) {
         container.innerHTML = '<p>Ошибка загрузки товаров</p>';
+    }
+}
+
+async function renderCart(isAuthorized) {
+    const container = document.getElementById('cart-container') || appContainer;
+    if (!isAuthorized) {
+        container.innerHTML = '<h2>Пожалуйста, войдите, чтобы увидеть корзину</h2>';
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/cart');
+        const cart = await res.json();
+
+        if (!cart.items || cart.items.length === 0) {
+            container.innerHTML = '<h2>Корзина пуста</h2>';
+        } else {
+            const total = cart.items.reduce((sum, i) => sum + (i.product.price * i.quantity), 0);
+            container.innerHTML = `
+                <h2>Ваша корзина</h2>
+                <div class="cart-items">
+                    ${cart.items.map(i => `
+                        <p>${i.product.title} x ${i.quantity} — ${i.product.price * i.quantity} руб.</p>
+                    `).join('')}
+                </div>
+                <hr>
+                <h3>Итого: ${total} руб.</h3>
+                <button class="btn" id="checkout-btn" style="background: green; color: white;">Оформить заказ</button>
+            `;
+
+            document.getElementById('checkout-btn').addEventListener('click', async () => {
+                const orderRes = await fetch('/api/orders', { method: 'POST' });
+                const orderData = await orderRes.json();
+                alert(orderData.message);
+                if (orderRes.ok) navigateTo('auth');
+            });
+        }
+    } catch (err) {
+        console.error(err);
     }
 }
 
@@ -75,7 +125,9 @@ async function renderProfile(email) {
 }
 
 async function renderOrders() {
-    const section = document.getElementById('user-orders-section') || appContainer;
+    const section = document.getElementById('user-orders-section');
+    if (!section) return;
+
     try {
         const response = await fetch('/api/orders');
         const orders = await response.json();
@@ -84,15 +136,13 @@ async function renderOrders() {
             ? orders.map(o => `
                 <div class="order-card" style="border: 1px solid #ccc; padding: 10px; margin: 10px 0;">
                     <p>Заказ #${o.id} - ${o.date}</p>
-                    <p>Статус: <strong>${o.status}</strong></p>
+                    <p>Статус: <strong style="color: green;">${o.status}</strong></p>
                     <p>Сумма: ${o.totalPrice} руб.</p>
                 </div>
             `).join('')
             : '<p>У вас пока нет доставок.</p>';
 
-        if (document.getElementById('user-orders-section')) {
-            document.getElementById('user-orders-section').innerHTML = `<h3>Ваши доставки:</h3>${ordersHTML}`;
-        }
+        section.innerHTML = `<h3>Ваши доставки:</h3>${ordersHTML}`;
     } catch (err) {
         console.error(err);
     }
@@ -128,8 +178,8 @@ function setupAuthForms() {
     if (regForm) {
         regForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('reg-email').value;
-            const password = document.getElementById('reg-password').value;
+            const email = regForm.querySelector('input[type="email"]').value;
+            const password = regForm.querySelector('input[type="password"]').value;
             
             const response = await fetch('/api/register', {
                 method: 'POST',
@@ -148,10 +198,11 @@ function setupAuthForms() {
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
+            const email = loginForm.querySelector('input[type="email"]').value;
+            const password = loginForm.querySelector('input[type="password"]').value;
+            
             const response = await fetch('/api/login', { 
-                method: 'POST',
+                method: 'POST', 
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
