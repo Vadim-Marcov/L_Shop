@@ -1,19 +1,33 @@
 [
   {
     "id": "1",
-    "title": "Стильный худи для  прогеров",
-    "description": "Черный худи",
+    "title": "Стильный худи для прогеров",
+    "description": "Черный худи с карманом для кофе",
     "price": 200,
     "category": "одежда",
-    "inStock": true
+    "inStock": true,
+    "count": 5,
+    "image": "/images/hudi1.jpg"
   },
 
   {
     "id": "2",
-    "title": "Модный худи для  прогеров",
-    "description": "Красный худи",
+    "title": "Модный худи для тебя",
+    "description": "Красный худи, притягивающий баги",
     "price": 300,
     "category": "одежда",
-    "inStock": true
+    "inStock": false,
+    "count": 0,
+    "image": "/images/hudi2.jpg"
+  },
+  {
+    "id": "3",
+    "title": "Кепка Senior",
+    "description": "Защищает от выгорания",
+    "price": 150,
+    "category": "аксессуары",
+    "inStock": true,
+    "count": 10,
+    "image": "/images/kepka1.jpg"
   }
 ]
