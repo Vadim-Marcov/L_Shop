@@ -40,34 +40,85 @@ async function loadProducts() {
     const container = document.getElementById('products-container');
     if (!container) return;
 
+    const searchInput = document.getElementById('search-input');
+    const categorySelect = document.getElementById('category-filter');
+    const sortPriceSelect = document.getElementById('sort-price');
+    const stockCheckbox = document.getElementById('stock-filter');
+
     try {
         const response = await fetch('/api/products');
-        const products = await response.json();
+        const allProducts = await response.json();
 
-        container.innerHTML = products.map(p => `
-            <div class="product-card">
-                <h3>${p.title}</h3>
-                <p>${p.description}</p>
-                <p><strong>${p.price} руб.</strong></p>
-                <button class="btn buy-btn" data-id="${p.id}">В корзину</button>
-            </div>
-        `).join('');
+        const applyAllFilters = () => {
+            let filtered = [...allProducts];
 
-        container.querySelectorAll('.buy-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const res = await fetch('/api/cart', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ productId: btn.dataset.id })
-                });
-                const data = await res.json();
-                alert(data.message);
-                if (res.status === 401) navigateTo('auth');
-            });
-        });
+            const query = searchInput.value.toLowerCase();
+            filtered = filtered.filter(p => 
+                p.title.toLowerCase().includes(query) || 
+                p.description.toLowerCase().includes(query)
+            );
+
+            const category = categorySelect.value;
+            if (category !== 'all') {
+                filtered = filtered.filter(p => p.category === category);
+            }
+
+            if (stockCheckbox.checked) {
+                filtered = filtered.filter(p => p.inStock === true);
+            }
+
+            const sortOrder = sortPriceSelect.value;
+            if (sortOrder === 'low') {
+                filtered.sort((a, b) => a.price - b.price);
+            } else if (sortOrder === 'high') {
+                filtered.sort((a, b) => b.price - a.price);
+            }
+
+            render(filtered);
+        };
+
+        const render = (data) => {
+            container.innerHTML = data.map(p => `
+                <div class="product-card" data-product-id="${p.id}" style="border: 1px solid #ddd; padding: 10px; border-radius: 8px; opacity: ${p.inStock ? 1 : 0.5}">
+                    <img src="${p.image}" alt="${p.title}" style="width: 100%; border-radius: 5px;">
+                    <h3 data-title>${p.title}</h3>
+                    <p style="font-size: 0.9em; color: #666;">${p.description}</p>
+                    <p>Категория: <b>${p.category}</b></p>
+                    <p><strong><span data-price>${p.price}</span> руб.</strong></p>
+                    <p>${p.inStock ? '✅ В наличии' : '❌ Нет на складе'}</p>
+                    <button class="btn buy-btn" data-id="${p.id}" data-add-to-cart ${!p.inStock ? 'disabled' : ''}>
+                        ${p.inStock ? 'В корзину' : 'Ожидается'}
+                    </button>
+                </div>
+            `).join('');
+            setupBuyButtons();
+        };
+
+        searchInput.addEventListener('input', applyAllFilters);
+        categorySelect.addEventListener('change', applyAllFilters);
+        sortPriceSelect.addEventListener('change', applyAllFilters);
+        stockCheckbox.addEventListener('change', applyAllFilters);
+
+        render(allProducts);
+
     } catch (err) {
         container.innerHTML = '<p>Ошибка загрузки товаров</p>';
     }
+}
+
+function setupBuyButtons() {
+    document.querySelectorAll('.buy-btn').forEach(btn => {
+        btn.onclick = async () => {
+            const res = await fetch('/api/cart', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId: btn.dataset.id })
+            });
+            const data = await res.json();
+            alert(data.message);
+            if (res.status === 401) navigateTo('auth');
+        };
+    });
 }
 
 async function renderCart(isAuthorized) {
