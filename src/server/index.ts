@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import cookieParser from 'cookie-parser';
 import { db } from './db';
-import { setSafeCookie } from './auth';
+import { setSafeCookie, clearSafeCookie, SESSION_COOKIE_NAME } from './auth';
 
 const app = express();
 const PORT = 3000;
@@ -13,39 +13,61 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, '../client')));
 
 app.get('/api/products', async (req, res) => {
-    const products = await db.read('products');
-    res.json(products);
+    try {
+        const products = await db.read('products');
+        res.json(products);
+    } catch (error) {
+        res.status(500).json({ message: "Ошибка при чтении товаров" });
+    }
 });
 
 app.post('/api/register', async (req, res) => {
     const { email, password } = req.body;
+    
+    if (!email || !password) {
+        return res.status(400).json({ message: "Заполните все поля" });
+    }
+
     const users = await db.read('users');
     
     if (users.find((u: any) => u.email === email)) {
-        return res.status(400).json({ message: "Уже есть такой юзер" });
+        return res.status(400).json({ message: "Такой пользователь уже существует" });
     }
 
     users.push({ email, password });
     await db.write('users', users);
     
     setSafeCookie(res, email);
-    res.status(201).json({ message: "Успех!" });
+    res.status(201).json({ message: "Регистрация успешна!" });
 });
+
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
     const users = await db.read('users'); 
     
-  
     const user = users.find((u: any) => u.email === email && u.password === password);
     
     if (!user) {
-    
         return res.status(401).json({ message: "Неверный логин или пароль!" });
     }
 
-
     setSafeCookie(res, email);
-    res.json({ message: "Успешный вход! Кука установлена." });
+    res.json({ message: "Успешный вход!" });
+});
+
+app.post('/api/logout', (req, res) => {
+    clearSafeCookie(res);
+    res.json({ message: "Вы вышли из системы" });
+});
+
+app.get('/api/check-auth', (req, res) => {
+    const sessionId = req.cookies[SESSION_COOKIE_NAME];
+    
+    if (sessionId) {
+        res.json({ authorized: true, email: sessionId });
+    } else {
+        res.json({ authorized: false });
+    }
 });
 
 app.listen(PORT, () => {
