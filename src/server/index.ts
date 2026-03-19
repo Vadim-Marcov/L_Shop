@@ -34,7 +34,8 @@ app.post('/api/register', async (req, res) => {
         return res.status(400).json({ message: "Такой пользователь уже существует" });
     }
 
-    users.push({ email, password });
+    const newUser = { id: Date.now().toString(), email, password };
+    users.push(newUser);
     await db.write('users', users);
     
     setSafeCookie(res, email);
@@ -62,11 +63,23 @@ app.post('/api/logout', (req, res) => {
 
 app.get('/api/check-auth', (req, res) => {
     const sessionId = req.cookies[SESSION_COOKIE_NAME];
-    
     if (sessionId) {
         res.json({ authorized: true, email: sessionId });
     } else {
         res.json({ authorized: false });
+    }
+});
+
+app.get('/api/orders', async (req, res) => {
+    const userEmail = req.cookies[SESSION_COOKIE_NAME];
+    if (!userEmail) return res.status(401).json({ message: "Не авторизован" });
+
+    try {
+        const allOrders = await db.read('orders');
+        const userOrders = allOrders.filter((o: any) => o.userId === userEmail);
+        res.json(userOrders);
+    } catch (error) {
+        res.status(500).json({ message: "Ошибка при чтении заказов" });
     }
 });
 
