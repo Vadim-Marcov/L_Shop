@@ -4,19 +4,37 @@ import { cartHTML } from './pages/cartTemplate.js';
 
 const appContainer = document.getElementById('app');
 
-export function navigateTo(page) {
+export async function navigateTo(page) {
     appContainer.innerHTML = '';
+
+    const authStatus = await checkAuth();
 
     if (page === 'catalog') {
         appContainer.innerHTML = catalogHTML;
         loadProducts();
     } 
     else if (page === 'auth') {
-        appContainer.innerHTML = getAuthHTML('login');
-        setupAuthForms();
+        if (authStatus.authorized) {
+            renderProfile(authStatus.email);
+        } else {
+            appContainer.innerHTML = getAuthHTML('login');
+            setupAuthForms();
+        }
     } 
     else if (page === 'cart') {
         appContainer.innerHTML = cartHTML;
+        if (authStatus.authorized) {
+            renderOrders();
+        }
+    }
+}
+
+async function checkAuth() {
+    try {
+        const response = await fetch('/api/check-auth');
+        return await response.json();
+    } catch (err) {
+        return { authorized: false };
     }
 }
 
@@ -41,10 +59,53 @@ async function loadProducts() {
     }
 }
 
+async function renderProfile(email) {
+    appContainer.innerHTML = `
+        <div class="profile-container">
+            <h2>Личный кабинет</h2>
+            <p>Вы вошли как: <strong>${email}</strong></p>
+            <button class="btn" id="logout-btn">Выйти</button>
+            <hr>
+            <div id="user-orders-section"></div>
+        </div>
+    `;
+    
+    document.getElementById('logout-btn').addEventListener('click', logout);
+    renderOrders();
+}
+
+async function renderOrders() {
+    const section = document.getElementById('user-orders-section') || appContainer;
+    try {
+        const response = await fetch('/api/orders');
+        const orders = await response.json();
+
+        const ordersHTML = orders.length > 0 
+            ? orders.map(o => `
+                <div class="order-card" style="border: 1px solid #ccc; padding: 10px; margin: 10px 0;">
+                    <p>Заказ #${o.id} - ${o.date}</p>
+                    <p>Статус: <strong>${o.status}</strong></p>
+                    <p>Сумма: ${o.totalPrice} руб.</p>
+                </div>
+            `).join('')
+            : '<p>У вас пока нет доставок.</p>';
+
+        if (document.getElementById('user-orders-section')) {
+            document.getElementById('user-orders-section').innerHTML = `<h3>Ваши доставки:</h3>${ordersHTML}`;
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+async function logout() {
+    await fetch('/api/logout', { method: 'POST' });
+    navigateTo('auth');
+}
+
 function setupAuthForms() {
     const regForm = document.getElementById('register-form');
     const loginForm = document.getElementById('login-form');
-
     const toRegisterLink = document.getElementById('to-register');
     const toLoginLink = document.getElementById('to-login');
 
@@ -69,16 +130,14 @@ function setupAuthForms() {
             e.preventDefault();
             const email = document.getElementById('reg-email').value;
             const password = document.getElementById('reg-password').value;
-
+            
             const response = await fetch('/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
-
             const data = await response.json();
             alert(data.message);
-
             if (response.ok) {
                 appContainer.innerHTML = getAuthHTML('login');
                 setupAuthForms();
@@ -91,13 +150,11 @@ function setupAuthForms() {
             e.preventDefault();
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
-
             const response = await fetch('/api/login', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
-
             const data = await response.json();
             if (response.ok) {
                 alert('Успешный вход!');
