@@ -9,7 +9,6 @@
     "count": 5,
     "image": "/images/hudi1.jpg"
   },
-
   {
     "id": "2",
     "title": "Модный худи для тебя",
@@ -27,7 +26,7 @@
     "price": 150,
     "category": "аксессуары",
     "inStock": true,
-    "count": 10,
+    "count": 6,
     "image": "/images/kepka1.jpg"
   }
 ]
