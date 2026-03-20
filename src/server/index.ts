@@ -91,8 +91,12 @@ app.post('/api/cart', async (req, res) => {
 
     const existingItem = userCart.items.find((i: any) => i.product.id === productId);
     if (existingItem) {
+        if (existingItem.quantity >= product.count) {
+            return res.status(400).json({ message: `Недостаточно товара на складе (макс: ${product.count})` });
+        }
         existingItem.quantity += 1;
     } else {
+        if (product.count < 1) return res.status(400).json({ message: "Товара нет в наличии" });
         userCart.items.push({ product, quantity: 1 });
     }
 
@@ -100,37 +104,113 @@ app.post('/api/cart', async (req, res) => {
     res.json({ message: "Товар добавлен в корзину!" });
 });
 
+app.put('/api/cart', async (req, res) => {
+    const userEmail = req.cookies[SESSION_COOKIE_NAME];
+    if (!userEmail) return res.status(401).json({ message: "Не авторизован" });
+
+    const { productId, action } = req.body; 
+    const allCarts = await db.read('carts');
+    const allProducts = await db.read('products');
+    const userCart = allCarts.find((c: any) => c.userId === userEmail);
+    
+    if (!userCart) return res.status(404).json({ message: "Корзина пуста" });
+
+    const item = userCart.items.find((i: any) => i.product.id === productId);
+    const product = allProducts.find((p: any) => p.id === productId);
+    if (!item || !product) return res.status(404).json({ message: "Товар не найден" });
+
+    if (action === 'increase') {
+        if (item.quantity >= product.count) {
+            return res.status(400).json({ message: `Максимальное количество на складе: ${product.count}` });
+        }
+        item.quantity += 1;
+    } else if (action === 'decrease' && item.quantity > 1) {
+        item.quantity -= 1;
+    }
+
+    await db.write('carts', allCarts);
+    res.json(userCart);
+});
+
+app.delete('/api/cart/:productId', async (req, res) => {
+    const userEmail = req.cookies[SESSION_COOKIE_NAME];
+    if (!userEmail) return res.status(401).json({ message: "Не авторизован" });
+
+    const { productId } = req.params;
+    const allCarts = await db.read('carts');
+    const userCart = allCarts.find((c: any) => c.userId === userEmail);
+
+    if (userCart) {
+        userCart.items = userCart.items.filter((i: any) => i.product.id !== productId);
+        await db.write('carts', allCarts);
+    }
+    res.json({ message: "Товар удален", cart: userCart });
+});
+
 app.post('/api/orders', async (req, res) => {
     const userEmail = req.cookies[SESSION_COOKIE_NAME];
     if (!userEmail) return res.status(401).json({ message: "Не авторизован" });
 
+    const { phone, email, address, payment } = req.body;
+
     const allCarts = await db.read('carts');
+    const allProducts = await db.read('products');
     const allOrders = await db.read('orders');
-    
-    const cartIdx = allCarts.findIndex((c: any) => c.userId === userEmail);
-    const userCart = allCarts[cartIdx];
+
+    const userCart = allCarts.find((c: any) => c.userId === userEmail);
 
     if (!userCart || userCart.items.length === 0) {
-        return res.status(400).json({ message: "Ваша корзина пуста" });
+        return res.status(400).json({ message: "Корзина пуста" });
+    }
+
+    for (const item of userCart.items) {
+        const product = allProducts.find((p: any) => p.id === item.product.id);
+        if (!product || product.count < item.quantity) {
+            return res.status(400).json({ 
+                message: `Ошибка: товара "${item.product.title}" недостаточно на складе!` 
+            });
+        }
+    }
+
+    userCart.items.forEach((item: any) => {
+        const product = allProducts.find((p: any) => p.id === item.product.id);
+        if (product) {
+            product.count -= item.quantity;
+            if (product.count <= 0) {
+                product.inStock = false;
+            }
+        }
+    });
+
+    let totalPrice = userCart.items.reduce((sum: number, i: any) => sum + (i.product.price * i.quantity), 0);
+ 
+    if (address && address !== 'Самовывоз') {
+        totalPrice += 10;
     }
 
     const newOrder = {
-        id: "ORD-" + Date.now(),
+        id: Date.now().toString(),
         userId: userEmail,
-        items: userCart.items,
-        totalPrice: userCart.items.reduce((sum: number, i: any) => sum + (i.product.price * i.quantity), 0),
-        date: new Date().toLocaleDateString('ru-RU'),
-        status: "В обработке"
+        items: [...userCart.items], 
+        totalPrice: totalPrice,
+        date: new Date().toLocaleString('ru-RU'),
+        status: 'pending', 
+        deliveryDetails: { 
+            phone: phone || '', 
+            email: email || '', 
+            address: address || 'Не указан', 
+            payment: payment || 'Не указан' 
+        }
     };
 
     allOrders.push(newOrder);
-
-    allCarts.splice(cartIdx, 1);
+    userCart.items = [];
 
     await db.write('orders', allOrders);
+    await db.write('products', allProducts);
     await db.write('carts', allCarts);
 
-    res.status(201).json({ message: "Заказ успешно оформлен!", order: newOrder });
+    res.json({ message: "Заказ успешно оформлен! Мы свяжемся с вами.", order: newOrder });
 });
 
 app.get('/api/orders', async (req, res) => {
