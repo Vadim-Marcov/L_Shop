@@ -6,13 +6,14 @@ export const cartHTML = `
         </div>
         
         <div class="delivery-section" style="margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
-            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: bold;">
-                <input type="checkbox" id="delivery-checkbox">
-                Нужна доставка курьером (+10 BYN)
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                <input type="checkbox" id="delivery-checkbox"> 
+                <strong>Доставка курьером (+10 BYN)</strong>
             </label>
-            <div id="delivery-address-container" style="display: none; margin-top: 10px;">
-                <input type="text" id="delivery-address" placeholder="Укажите адрес доставки (г. Минск, ул...)" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-            </div>
+            
+            <p style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                * Если не выбрано — самовывоз (бесплатно)
+            </p>
         </div>
 
         <div class="cart-summary" style="margin-top: 20px;">
