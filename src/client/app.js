@@ -6,7 +6,6 @@ import { deliveryHTML } from './pages/deliveryTemplate.js';
 const appContainer = document.getElementById('app');
 const DELIVERY_COST = 10;
 
-// Глобальное состояние для передачи между страницами (п. 52 ТЗ)
 let isDeliveryRequired = false; 
 let captchaResult = 0;
 
@@ -14,7 +13,6 @@ export async function navigateTo(page) {
     appContainer.innerHTML = '';
     const authStatus = await checkAuth();
 
-    // Обновляем кнопку в навигации (Вход -> Личный кабинет)
     const navAuthBtn = document.getElementById('nav-auth');
     if (navAuthBtn) {
         navAuthBtn.textContent = authStatus.authorized ? 'Личный кабинет' : 'Войти';
@@ -28,8 +26,7 @@ export async function navigateTo(page) {
         if (authStatus.authorized) {
             renderProfile(authStatus.email);
         } else {
-            appContainer.innerHTML = getAuthHTML('login');
-            setupAuthForms();
+            switchAuthMode('login');
         }
     } 
     else if (page === 'cart') {
@@ -49,6 +46,12 @@ async function checkAuth() {
     } catch (err) {
         return { authorized: false };
     }
+}
+
+// Вспомогательная функция для смены режима входа/регистрации
+function switchAuthMode(mode) {
+    appContainer.innerHTML = getAuthHTML(mode);
+    setupAuthForms();
 }
 
 // --- КАТАЛОГ И ТОВАРЫ ---
@@ -112,8 +115,6 @@ async function loadProducts() {
     }
 }
 
-
-
 function setupBuyButtons() {
     document.querySelectorAll('.buy-btn').forEach(btn => {
         btn.onclick = async () => {
@@ -137,7 +138,7 @@ async function renderCart(isAuthorized) {
     const deliveryCheckbox = document.getElementById('delivery-checkbox');
 
     if (!isAuthorized) {
-        appContainer.innerHTML = '<h2>Пожалуйста, войдите в аккаунт</h2>';
+        appContainer.innerHTML = '<div class="container"><h2>Пожалуйста, войдите в аккаунт для доступа к корзине</h2></div>';
         return;
     }
 
@@ -169,7 +170,7 @@ async function renderCart(isAuthorized) {
             let sum = items.reduce((acc, i) => acc + (i.product.price * i.quantity), 0);
             if (deliveryCheckbox.checked) sum += DELIVERY_COST;
             totalPriceEl.textContent = sum;
-            isDeliveryRequired = deliveryCheckbox.checked; // Запоминаем выбор
+            isDeliveryRequired = deliveryCheckbox.checked;
         };
 
         deliveryCheckbox.onchange = updateUI;
@@ -210,57 +211,54 @@ function setupDeliveryPage() {
     const addressGroup = document.getElementById('address-group');
     const addressInput = document.getElementById('delivery-address-full');
 
-    // Логика отображения адреса (твой запрос)
     if (!isDeliveryRequired) {
-        addressGroup.style.display = 'none';
-        addressInput.removeAttribute('required');
+        if (addressGroup) addressGroup.style.display = 'none';
+        if (addressInput) addressInput.removeAttribute('required');
     } else {
-        addressGroup.style.display = 'block';
-        addressInput.setAttribute('required', 'true');
+        if (addressGroup) addressGroup.style.display = 'block';
+        if (addressInput) addressInput.setAttribute('required', 'true');
     }
 
-    // Генерация капчи
     const num1 = Math.floor(Math.random() * 10);
     const num2 = Math.floor(Math.random() * 10);
     captchaResult = num1 + num2;
-    captchaLabel.innerText = `${num1} + ${num2} = ?`;
+    if (captchaLabel) captchaLabel.innerText = `${num1} + ${num2} = ?`;
     
-
     if (backBtn) backBtn.onclick = () => navigateTo('cart');
 
-    form.onsubmit = async (e) => {
-        e.preventDefault();
+    if (form) {
+        form.onsubmit = async (e) => {
+            e.preventDefault();
 
-        // Проверка капчи
-        const userAnswer = parseInt(document.getElementById('captcha-input').value);
-        if (userAnswer !== captchaResult) {
-            alert('Ошибка подтверждения! Вы робот?');
-            return;
-        }
+            const userAnswer = parseInt(document.getElementById('captcha-input').value);
+            if (userAnswer !== captchaResult) {
+                alert('Ошибка подтверждения! Вы робот?');
+                return;
+            }
 
-        const orderData = {
-            phone: document.getElementById('delivery-phone').value,
-            email: document.getElementById('delivery-email-confirm').value,
-            address: isDeliveryRequired ? addressInput.value : "Самовывоз из магазина",
-            payment: document.getElementById('payment-method').value
+            const orderData = {
+                phone: document.getElementById('delivery-phone').value,
+                email: document.getElementById('delivery-email-confirm').value,
+                address: isDeliveryRequired ? addressInput.value : "Самовывоз из магазина",
+                payment: document.getElementById('payment-method').value
+            };
+
+            const res = await fetch('/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderData)
+            });
+
+            if (res.ok) {
+                alert('Заказ принят! Ждем вас.');
+                navigateTo('auth'); 
+            } else {
+                alert('Ошибка при сохранении заказа');
+            }
         };
-
-        const res = await fetch('/api/orders', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(orderData)
-        });
-
-        if (res.ok) {
-            alert('Заказ принят! Ждем вас.');
-            navigateTo('auth'); 
-        } else {
-            alert('Ошибка при сохранении заказа');
-        }
-    };
+    }
 }
 
-// --- ПРОФИЛЬ И ВХОД ---
 async function renderProfile(email) {
     appContainer.innerHTML = `
         <div class="profile-container">
@@ -294,18 +292,26 @@ async function logout() {
 function setupAuthForms() {
     const regForm = document.getElementById('register-form');
     const loginForm = document.getElementById('login-form');
+    const toRegBtn = document.getElementById('to-register');
+    const toLoginBtn = document.getElementById('to-login');
+
+    if (toRegBtn) toRegBtn.onclick = (e) => { e.preventDefault(); switchAuthMode('register'); };
+    if (toLoginBtn) toLoginBtn.onclick = (e) => { e.preventDefault(); switchAuthMode('login'); };
 
     if (regForm) {
         regForm.onsubmit = async (e) => {
             e.preventDefault();
-            const email = regForm.querySelector('input[type="email"]').value;
-            const password = regForm.querySelector('input[type="password"]').value;
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
             const res = await fetch('/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
-            if (res.ok) navigateTo('auth');
+            if (res.ok) {
+                alert('Регистрация успешна! Теперь войдите.');
+                switchAuthMode('login');
+            }
             else alert('Ошибка регистрации');
         };
     }
@@ -313,8 +319,8 @@ function setupAuthForms() {
     if (loginForm) {
         loginForm.onsubmit = async (e) => {
             e.preventDefault();
-            const email = loginForm.querySelector('input[type="email"]').value;
-            const password = loginForm.querySelector('input[type="password"]').value;
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
             const res = await fetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
