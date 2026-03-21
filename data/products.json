@@ -12,7 +12,7 @@
   {
     "id": "2",
     "title": "Модный худи для тебя",
-    "description": "Красный худи, притягивающий баги",
+    "description": "Белый худи, притягивающий баги",
     "price": 300,
     "category": "одежда",
     "inStock": false,
@@ -28,5 +28,55 @@
     "inStock": true,
     "count": 6,
     "image": "/images/kepka1.jpg"
+  },
+  {
+    "id": "4",
+    "title": "Футболка Deploy",
+    "description": "Приносит удачу при деплое в пятницу вечером",
+    "price": 80,
+    "category": "одежда",
+    "inStock": true,
+    "count": 11,
+    "image": "/images/tshirt1.jpg"
+  },
+  {
+    "id": "5",
+    "title": "Носки Грибок",
+    "description": "Мягкие, высокие, безграничные как память",
+    "price": 25,
+    "category": "одежда",
+    "inStock": true,
+    "count": 18,
+    "image": "/images/socks1.jpg"
+  },
+  {
+    "id": "6",
+    "title": "Рюкзак Backend",
+    "description": "Вмещает ноутбук и все нерешенные задачи",
+    "price": 250,
+    "category": "аксессуары",
+    "inStock": true,
+    "count": 3,
+    "image": "/images/backpack1.jpg"
+  },
+  {
+    "id": "7",
+    "title": "Свитшот Legacy",
+    "description": "Выглядит как старый, но работает надежно",
+    "price": 180,
+    "category": "одежда",
+    "inStock": true,
+    "count": 7,
+    "image": "/images/sweatshirt1.jpg"
+  },
+  {
+    "id": "8",
+    "title": "Очки Blue Light",
+    "description": "Фильтруют синий свет и плохой код",
+    "price": 120,
+    "category": "аксессуары",
+    "inStock": false,
+    "count": 0,
+    "image": "/images/glasses1.jpg"
   }
 ]
