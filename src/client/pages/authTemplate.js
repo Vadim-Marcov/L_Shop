@@ -14,7 +14,7 @@ export const getAuthHTML = (mode = 'login') => {
     } else {
         return `
             <div class="auth-container">
-                <form class="auth-form" id="register-form">
+                <form class="auth-form" id="register-form" data-registration>
                     <h2>Регистрация</h2>
                     <input type="email" id="reg-email" placeholder="Email" required>
                     <input type="password" id="reg-password" placeholder="Пароль" required>
