@@ -1,7 +1,7 @@
 export const deliveryHTML = `
     <div class="delivery-container">
         <h2>Оформление доставки</h2>
-        <form id="delivery-form" class="auth-form" style="max-width: 500px; margin: 0 auto;">
+        <form id="delivery-form" data-delivery-form class="auth-form" style="max-width: 500px; margin: 0 auto;">
             <div class="form-group">
                 <label>Контактный телефон:</label>
                 <input type="tel" id="delivery-phone" placeholder="+375 (__) ___-__-__" required>
