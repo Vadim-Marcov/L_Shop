@@ -5,9 +5,7 @@ import { deliveryHTML } from './pages/deliveryTemplate.js';
 
 const appContainer = document.getElementById('app');
 const DELIVERY_COST = 10;
-
 let isDeliveryRequired = false; 
-let captchaResult = 0;
 
 export async function navigateTo(page) {
     appContainer.innerHTML = '';
@@ -48,13 +46,11 @@ async function checkAuth() {
     }
 }
 
-// Вспомогательная функция для смены режима входа/регистрации
 function switchAuthMode(mode) {
     appContainer.innerHTML = getAuthHTML(mode);
     setupAuthForms();
 }
 
-// --- КАТАЛОГ И ТОВАРЫ ---
 async function loadProducts() {
     const container = document.getElementById('products-container');
     if (!container) return;
@@ -70,19 +66,21 @@ async function loadProducts() {
 
         const applyAllFilters = () => {
             let filtered = [...allProducts];
-            const query = searchInput.value.toLowerCase();
+            const query = searchInput ? searchInput.value.toLowerCase() : '';
             
-            filtered = filtered.filter(p => 
-                p.title.toLowerCase().includes(query) || 
-                p.description.toLowerCase().includes(query)
-            );
+            if (query) {
+                filtered = filtered.filter(p => 
+                    p.title.toLowerCase().includes(query) || 
+                    p.description.toLowerCase().includes(query)
+                );
+            }
 
-            const category = categorySelect.value;
+            const category = categorySelect ? categorySelect.value : 'all';
             if (category !== 'all') filtered = filtered.filter(p => p.category === category);
             
-            if (stockCheckbox.checked) filtered = filtered.filter(p => p.inStock === true);
+            if (stockCheckbox && stockCheckbox.checked) filtered = filtered.filter(p => p.inStock === true);
 
-            const sortOrder = sortPriceSelect.value;
+            const sortOrder = sortPriceSelect ? sortPriceSelect.value : '';
             if (sortOrder === 'low') filtered.sort((a, b) => a.price - b.price);
             else if (sortOrder === 'high') filtered.sort((a, b) => b.price - a.price);
 
@@ -95,7 +93,7 @@ async function loadProducts() {
                     <img src="${p.image}" alt="${p.title}" class="product-img">
                     <h3 data-title>${p.title}</h3>
                     <p>${p.description}</p>
-                    <p><strong><span data-price>${p.price}</span> руб.</strong></p>
+                    <p><strong><span data-price>${p.price}</span> BYN</strong></p>
                     <button class="btn buy-btn" data-id="${p.id}" ${!p.inStock ? 'disabled' : ''}>
                         ${p.inStock ? 'В корзину' : 'Ожидается'}
                     </button>
@@ -104,12 +102,12 @@ async function loadProducts() {
             setupBuyButtons();
         };
 
-        searchInput.addEventListener('input', applyAllFilters);
-        categorySelect.addEventListener('change', applyAllFilters);
-        sortPriceSelect.addEventListener('change', applyAllFilters);
-        stockCheckbox.addEventListener('change', applyAllFilters);
+        if (searchInput) searchInput.addEventListener('input', applyAllFilters);
+        if (categorySelect) categorySelect.addEventListener('change', applyAllFilters);
+        if (sortPriceSelect) sortPriceSelect.addEventListener('change', applyAllFilters);
+        if (stockCheckbox) stockCheckbox.addEventListener('change', applyAllFilters);
+        
         render(allProducts);
-
     } catch (err) {
         container.innerHTML = '<p>Ошибка загрузки товаров</p>';
     }
@@ -130,7 +128,6 @@ function setupBuyButtons() {
     });
 }
 
-// --- КОРЗИНА ---
 async function renderCart(isAuthorized) {
     const itemsContainer = document.getElementById('cart-items');
     const totalPriceEl = document.getElementById('total-price');
@@ -138,7 +135,7 @@ async function renderCart(isAuthorized) {
     const deliveryCheckbox = document.getElementById('delivery-checkbox');
 
     if (!isAuthorized) {
-        appContainer.innerHTML = '<div class="container"><h2>Пожалуйста, войдите в аккаунт для доступа к корзине</h2></div>';
+        appContainer.innerHTML = '<div class="container"><h2>Войдите в аккаунт для доступа к корзине</h2></div>';
         return;
     }
 
@@ -148,45 +145,50 @@ async function renderCart(isAuthorized) {
         const items = cart.items || [];
 
         if (items.length === 0) {
-            itemsContainer.innerHTML = '<h3>Корзина пуста</h3>';
-            totalPriceEl.textContent = '0';
-            checkoutBtn.disabled = true;
+            if (itemsContainer) itemsContainer.innerHTML = '<h3>Корзина пуста</h3>';
+            if (totalPriceEl) totalPriceEl.textContent = '0';
+            if (checkoutBtn) checkoutBtn.disabled = true;
             return;
         }
 
-        itemsContainer.innerHTML = items.map(i => `
-            <div class="cart-item">
-                <span>${i.product.title} (${i.quantity} шт.)</span>
-                <span><b>${i.product.price * i.quantity} руб.</b></span>
-                <div>
-                    <button class="qty-btn" data-id="${i.product.id}" data-action="decrease">-</button>
-                    <button class="qty-btn" data-id="${i.product.id}" data-action="increase">+</button>
-                    <button class="remove-btn" data-id="${i.product.id}" style="color:red">✕</button>
+        if (itemsContainer) {
+            itemsContainer.innerHTML = items.map(i => `
+                <div class="cart-item">
+                    <span data-title="basket">${i.product.title} (${i.quantity} шт.)</span>
+                    <span><b data-price="basket">${i.product.price * i.quantity}</b> BYN</span>
+                    <div>
+                        <button class="qty-btn" data-id="${i.product.id}" data-action="decrease">-</button>
+                        <button class="qty-btn" data-id="${i.product.id}" data-action="increase">+</button>
+                        <button class="remove-btn" data-id="${i.product.id}" style="color:red">✕</button>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `).join('');
+        }
 
         const updateUI = () => {
             let sum = items.reduce((acc, i) => acc + (i.product.price * i.quantity), 0);
-            if (deliveryCheckbox.checked) sum += DELIVERY_COST;
-            totalPriceEl.textContent = sum;
-            isDeliveryRequired = deliveryCheckbox.checked;
+            if (deliveryCheckbox && deliveryCheckbox.checked) sum += DELIVERY_COST;
+            if (totalPriceEl) totalPriceEl.textContent = sum;
+            isDeliveryRequired = deliveryCheckbox ? deliveryCheckbox.checked : false;
         };
 
-        deliveryCheckbox.onchange = updateUI;
+        if (deliveryCheckbox) deliveryCheckbox.onchange = updateUI;
         
-        itemsContainer.querySelectorAll('.qty-btn').forEach(btn => {
-            btn.onclick = () => updateCartItem(btn.dataset.id, btn.dataset.action);
-        });
+        if (itemsContainer) {
+            itemsContainer.querySelectorAll('.qty-btn').forEach(btn => {
+                btn.onclick = () => updateCartItem(btn.dataset.id, btn.dataset.action);
+            });
+            itemsContainer.querySelectorAll('.remove-btn').forEach(btn => {
+                btn.onclick = () => updateCartItem(btn.dataset.id, 'remove');
+            });
+        }
 
-        itemsContainer.querySelectorAll('.remove-btn').forEach(btn => {
-            btn.onclick = () => updateCartItem(btn.dataset.id, 'remove');
-        });
-
-        checkoutBtn.onclick = () => navigateTo('delivery');
+        if (checkoutBtn) {
+            checkoutBtn.disabled = false;
+            checkoutBtn.onclick = () => navigateTo('delivery');
+        }
 
         updateUI();
-
     } catch (err) { console.error(err); }
 }
 
@@ -203,11 +205,9 @@ async function updateCartItem(productId, action) {
     renderCart(true); 
 }
 
-// --- ОФОРМЛЕНИЕ ЗАКАЗА ---
 function setupDeliveryPage() {
     const form = document.getElementById('delivery-form');
     const backBtn = document.getElementById('back-to-cart');
-    const captchaLabel = document.getElementById('captcha-question');
     const addressGroup = document.getElementById('address-group');
     const addressInput = document.getElementById('delivery-address-full');
 
@@ -219,42 +219,33 @@ function setupDeliveryPage() {
         if (addressInput) addressInput.setAttribute('required', 'true');
     }
 
-    const num1 = Math.floor(Math.random() * 10);
-    const num2 = Math.floor(Math.random() * 10);
-    captchaResult = num1 + num2;
-    if (captchaLabel) captchaLabel.innerText = `${num1} + ${num2} = ?`;
-    
     if (backBtn) backBtn.onclick = () => navigateTo('cart');
 
     if (form) {
         form.onsubmit = async (e) => {
             e.preventDefault();
 
-            const userAnswer = parseInt(document.getElementById('captcha-input').value);
-            if (userAnswer !== captchaResult) {
-                alert('Ошибка подтверждения! Вы робот?');
-                return;
-            }
-
             const orderData = {
                 phone: document.getElementById('delivery-phone').value,
                 email: document.getElementById('delivery-email-confirm').value,
-                address: isDeliveryRequired ? addressInput.value : "Самовывоз из магазина",
+                address: isDeliveryRequired ? addressInput.value : "Самовывоз",
                 payment: document.getElementById('payment-method').value
             };
 
-            const res = await fetch('/api/orders', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(orderData)
-            });
+            try {
+                const res = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orderData)
+                });
 
-            if (res.ok) {
-                alert('Заказ принят! Ждем вас.');
-                navigateTo('auth'); 
-            } else {
-                alert('Ошибка при сохранении заказа');
-            }
+                if (res.ok) {
+                    alert('Заказ принят!');
+                    navigateTo('auth'); 
+                } else {
+                    alert('Ошибка при оформлении');
+                }
+            } catch (err) { alert('Ошибка сети'); }
         };
     }
 }
@@ -269,17 +260,19 @@ async function renderProfile(email) {
             <div id="user-orders-section"></div>
         </div>
     `;
-    document.getElementById('logout-btn').onclick = logout;
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) logoutBtn.onclick = logout;
     renderOrders();
 }
 
 async function renderOrders() {
     const section = document.getElementById('user-orders-section');
+    if (!section) return;
     try {
         const response = await fetch('/api/orders');
         const orders = await response.json();
         section.innerHTML = `<h3>Ваши заказы:</h3>` + (orders.length > 0 
-            ? orders.map(o => `<div class="order-card">Заказ #${o.id} - ${o.totalPrice} руб. (${o.status})</div>`).join('')
+            ? orders.map(o => `<div class="order-card">Заказ #${o.id} - ${o.totalPrice} BYN (${o.status})</div>`).join('')
             : '<p>Заказов нет.</p>');
     } catch (err) { console.error(err); }
 }
@@ -292,44 +285,33 @@ async function logout() {
 function setupAuthForms() {
     const regForm = document.getElementById('register-form');
     const loginForm = document.getElementById('login-form');
-    const toRegBtn = document.getElementById('to-register');
-    const toLoginBtn = document.getElementById('to-login');
 
-    if (toRegBtn) toRegBtn.onclick = (e) => { e.preventDefault(); switchAuthMode('register'); };
-    if (toLoginBtn) toLoginBtn.onclick = (e) => { e.preventDefault(); switchAuthMode('login'); };
+    document.getElementById('to-register')?.addEventListener('click', (e) => { e.preventDefault(); switchAuthMode('register'); });
+    document.getElementById('to-login')?.addEventListener('click', (e) => { e.preventDefault(); switchAuthMode('login'); });
 
-    if (regForm) {
-        regForm.onsubmit = async (e) => {
+    const handleAuth = async (form, mode) => {
+        form.onsubmit = async (e) => {
             e.preventDefault();
-            const email = document.getElementById('reg-email').value;
-            const password = document.getElementById('reg-password').value;
-            const res = await fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-            if (res.ok) {
-                alert('Регистрация успешна! Теперь войдите.');
-                switchAuthMode('login');
-            }
-            else alert('Ошибка регистрации');
+            const email = form.querySelector('input[type="email"]').value;
+            const password = form.querySelector('input[type="password"]').value;
+            try {
+                const res = await fetch(`/api/${mode}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                if (res.ok) {
+                    if (mode === 'register') {
+                        alert('Успешно! Теперь войдите.');
+                        switchAuthMode('login');
+                    } else navigateTo('catalog');
+                } else alert('Ошибка авторизации');
+            } catch (err) { console.error(err); }
         };
-    }
+    };
 
-    if (loginForm) {
-        loginForm.onsubmit = async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-            if (res.ok) navigateTo('catalog');
-            else alert('Неверный логин или пароль');
-        };
-    }
+    if (regForm) handleAuth(regForm, 'register');
+    if (loginForm) handleAuth(loginForm, 'login');
 }
 
 document.getElementById('nav-catalog').onclick = () => navigateTo('catalog');
